@@ -13,6 +13,28 @@ function initialize() {
   });
   
   injectSidebar();
+  
+  // Check if we're already recording when the page loads
+  checkRecordingState();
+}
+
+function checkRecordingState() {
+  chrome.runtime.sendMessage({ action: 'getRecordingState' }, (state) => {
+    if (chrome.runtime.lastError) {
+      console.error('Error getting recording state:', chrome.runtime.lastError);
+      return;
+    }
+    
+    if (state && state.isRecording) {
+      // We're in an active recording session, restore the state
+      updateRecordingState(state);
+      
+      // Record navigation event if this is a new page
+      if (recorder && window.location.href !== state.currentRecording?.url) {
+        recorder.recordNavigationEvent();
+      }
+    }
+  });
 }
 
 function handleMessage(request, sender, sendResponse) {
@@ -46,8 +68,21 @@ function handleMessage(request, sender, sendResponse) {
 function updateRecordingState(state) {
   if (state.isRecording) {
     if (!recorder) recorder = new Recorder();
-    recorder.start();
+    
+    // Only start recording if not already recording
+    if (!recorder.isRecording) {
+      recorder.start();
+    }
+    
     updateSidebarState('recording');
+    
+    // Update recording info in sidebar
+    if (state.currentRecording) {
+      const statusText = document.querySelector('.br-status-text');
+      if (statusText) {
+        statusText.textContent = `Recording: ${state.currentRecording.name}`;
+      }
+    }
   } else {
     if (recorder) recorder.stop();
     updateSidebarState('idle');
@@ -55,7 +90,7 @@ function updateRecordingState(state) {
   
   if (state.isPaused && recorder) {
     recorder.pause();
-  } else if (!state.isPaused && recorder) {
+  } else if (!state.isPaused && recorder && recorder.isRecording) {
     recorder.resume();
   }
 }
@@ -197,6 +232,13 @@ function updateSidebarState(state) {
   const statusText = document.querySelector('.br-status-text');
   const timeDisplay = document.getElementById('br-time');
   
+  // Check if sidebar elements exist (they might not be loaded yet)
+  if (!recordBtn || !pauseBtn || !stopBtn || !statusText) {
+    // Retry after a short delay
+    setTimeout(() => updateSidebarState(state), 100);
+    return;
+  }
+  
   switch (state) {
     case 'recording':
       recordBtn.disabled = true;
@@ -204,8 +246,10 @@ function updateSidebarState(state) {
       stopBtn.disabled = false;
       statusText.textContent = 'Recording...';
       statusText.classList.add('recording');
-      timeDisplay.style.display = 'block';
-      startTimer();
+      if (timeDisplay) {
+        timeDisplay.style.display = 'block';
+        startTimer();
+      }
       break;
     
     case 'idle':
@@ -214,7 +258,9 @@ function updateSidebarState(state) {
       stopBtn.disabled = true;
       statusText.textContent = 'Ready to record';
       statusText.classList.remove('recording');
-      timeDisplay.style.display = 'none';
+      if (timeDisplay) {
+        timeDisplay.style.display = 'none';
+      }
       stopTimer();
       break;
   }

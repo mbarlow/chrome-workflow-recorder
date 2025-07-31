@@ -13,6 +13,10 @@ class Recorder {
     this.isRecording = true;
     this.isPaused = false;
     this.attachEventListeners();
+    this.recordNavigationEvent();
+  }
+  
+  recordNavigationEvent() {
     this.sendEvent({
       type: 'navigate',
       url: window.location.href,
@@ -55,14 +59,13 @@ class Recorder {
       this.eventHandlers.set(event, handler);
     }
     
+    // Store current URL to detect navigation
+    this.lastUrl = window.location.href;
+    
     const observer = new MutationObserver(() => {
       if (window.location.href !== this.lastUrl) {
         this.lastUrl = window.location.href;
-        this.sendEvent({
-          type: 'navigate',
-          url: window.location.href,
-          timestamp: Date.now()
-        });
+        this.recordNavigationEvent();
       }
     });
     

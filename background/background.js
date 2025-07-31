@@ -143,6 +143,23 @@ chrome.commands.onCommand.addListener((command) => {
   }
 });
 
+// Tab update listener - handle page navigation during recording
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  // If this tab is being recorded and the page has finished loading
+  if (recordingState.isRecording && 
+      recordingState.tabId === tabId && 
+      changeInfo.status === 'complete') {
+    
+    // Send the recording state to the newly loaded page
+    chrome.tabs.sendMessage(tabId, {
+      action: 'recordingStateChanged',
+      state: recordingState
+    }).catch(error => {
+      console.log('Could not send recording state to updated tab:', error);
+    });
+  }
+});
+
 // Message handler
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   switch (request.action) {
@@ -283,9 +300,12 @@ function startRecording(tabId) {
     }
   };
   
+  // Send message to the specific tab
   chrome.tabs.sendMessage(tabId, { 
     action: 'recordingStateChanged', 
     state: recordingState 
+  }).catch(error => {
+    console.log('Could not send message to tab (tab may still be loading):', error);
   });
   
   updateIcon(true);
