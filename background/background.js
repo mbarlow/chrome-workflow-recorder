@@ -413,7 +413,16 @@ function updateIcon(isRecording) {
     128: 'assets/icons/icon-128.png'
   };
   
-  chrome.action.setIcon({ path: iconPath });
+  chrome.action.setIcon({ path: iconPath }).catch(error => {
+    console.warn('Could not update extension icon:', error);
+    // Fallback: try to set just the badge text instead
+    chrome.action.setBadgeText({
+      text: isRecording ? 'REC' : ''
+    });
+    chrome.action.setBadgeBackgroundColor({
+      color: isRecording ? '#FF4444' : '#4CAF50'
+    });
+  });
 }
 
 // Generate unique ID
