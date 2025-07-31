@@ -275,3 +275,46 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
+
+/* Playback Progress Styles */
+.br-playback-progress {
+  background: #262626;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border: 1px solid #333;
+}
+
+.br-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.br-progress-title {
+  font-size: 13px;
+  color: #4CAF50;
+  font-weight: 500;
+}
+
+.br-progress-steps {
+  font-size: 11px;
+  color: #999;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.br-progress-bar-container {
+  background: #1a1a1a;
+  border-radius: 10px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.br-progress-bar {
+  background: linear-gradient(90deg, #4CAF50, #66BB6A);
+  height: 100%;
+  width: 0%;
+  transition: width 0.3s ease;
+  border-radius: 10px;
+}

@@ -267,6 +267,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       }
       break;
     
+    case 'playbackProgress':
+      // Forward playback progress to the current tab (in case multiple tabs are open)
+      if (sender.tab && sender.tab.id) {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: 'playbackProgress',
+          progress: request.progress,
+          currentStep: request.currentStep,
+          totalSteps: request.totalSteps
+        }).catch(() => {
+          // Ignore if message can't be sent
+        });
+      }
+      sendResponse({ success: true });
+      break;
+    
     default:
       sendResponse({ success: false, error: 'Unknown action' });
   }

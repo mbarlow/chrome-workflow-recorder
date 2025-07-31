@@ -35,6 +35,30 @@ function checkRecordingState() {
       }
     }
   });
+  
+  // Check if we need to continue playback after navigation
+  checkPlaybackState();
+}
+
+function checkPlaybackState() {
+  // Check localStorage for any pending playback
+  const pendingPlayback = localStorage.getItem('browser-recorder-pending-playback');
+  if (pendingPlayback) {
+    try {
+      const playbackData = JSON.parse(pendingPlayback);
+      localStorage.removeItem('browser-recorder-pending-playback');
+      
+      // Resume playback from where we left off
+      setTimeout(() => {
+        if (!player) player = new Player();
+        player.continuePlayback(playbackData.recording, playbackData.currentIndex);
+      }, 1000); // Wait for page to fully load
+      
+    } catch (error) {
+      console.error('Error resuming playback:', error);
+      localStorage.removeItem('browser-recorder-pending-playback');
+    }
+  }
 }
 
 function handleMessage(request, sender, sendResponse) {
@@ -58,6 +82,10 @@ function handleMessage(request, sender, sendResponse) {
       
       case 'resumePlayback':
         if (player) player.resume();
+        break;
+      
+      case 'playbackProgress':
+        updatePlaybackProgress(request.progress, request.currentStep, request.totalSteps);
         break;
     }
   } catch (error) {
@@ -98,11 +126,48 @@ function updateRecordingState(state) {
 function startPlayback(recording) {
   if (!player) player = new Player();
   
+  // Show playback progress in sidebar
+  const progressSection = document.getElementById('br-playback-progress');
+  if (progressSection) {
+    progressSection.style.display = 'block';
+    const stepsElement = document.getElementById('br-progress-steps');
+    if (stepsElement) {
+      stepsElement.textContent = `0 / ${recording.events ? recording.events.length : 0}`;
+    }
+  }
+  
   player.play(recording).then(() => {
     console.log('Playback completed');
+    hidePlaybackProgress();
   }).catch(error => {
     console.error('Playback failed:', error);
+    hidePlaybackProgress();
   });
+}
+
+function updatePlaybackProgress(progress, currentStep, totalSteps) {
+  const progressSection = document.getElementById('br-playback-progress');
+  const progressBar = document.getElementById('br-progress-bar');
+  const stepsElement = document.getElementById('br-progress-steps');
+  
+  if (progressSection) {
+    progressSection.style.display = 'block';
+  }
+  
+  if (progressBar) {
+    progressBar.style.width = progress + '%';
+  }
+  
+  if (stepsElement && currentStep && totalSteps) {
+    stepsElement.textContent = `${currentStep} / ${totalSteps}`;
+  }
+}
+
+function hidePlaybackProgress() {
+  const progressSection = document.getElementById('br-playback-progress');
+  if (progressSection) {
+    progressSection.style.display = 'none';
+  }
 }
 
 function injectSidebar() {
@@ -144,6 +209,16 @@ function injectSidebar() {
         <div class="br-status" id="br-status">
           <div class="br-status-text">Ready to record</div>
           <div class="br-status-time" id="br-time" style="display: none;">00:00</div>
+        </div>
+        
+        <div class="br-playback-progress" id="br-playback-progress" style="display: none;">
+          <div class="br-progress-header">
+            <span class="br-progress-title">Playback Progress</span>
+            <span class="br-progress-steps" id="br-progress-steps">0 / 0</span>
+          </div>
+          <div class="br-progress-bar-container">
+            <div class="br-progress-bar" id="br-progress-bar"></div>
+          </div>
         </div>
         
         <div class="br-section">

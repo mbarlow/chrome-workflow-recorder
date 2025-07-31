@@ -51,7 +51,8 @@ class Recorder {
       change: this.handleChange.bind(this),
       submit: this.handleSubmit.bind(this),
       scroll: this.throttle(this.handleScroll.bind(this), 200),
-      keydown: this.handleKeydown.bind(this)
+      keydown: this.handleKeydown.bind(this),
+      mousemove: this.throttle(this.handleMouseMove.bind(this), 100)
     };
     
     for (const [event, handler] of Object.entries(handlers)) {
@@ -206,6 +207,24 @@ class Recorder {
         });
       }
     }
+  }
+  
+  handleMouseMove(event) {
+    if (!this.shouldRecordEvent(event)) return;
+    
+    this.sendEvent({
+      type: 'mousemove',
+      timestamp: Date.now(),
+      coordinates: {
+        x: event.clientX,
+        y: event.clientY
+      },
+      scrollPosition: {
+        x: window.scrollX,
+        y: window.scrollY
+      },
+      url: window.location.href
+    });
   }
   
   shouldRecordEvent(event) {

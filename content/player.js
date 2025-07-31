@@ -24,6 +24,15 @@ class Player {
     this.showPlaybackIndicator();
     
     try {
+      // First check if we need to navigate to the starting URL
+      const firstNavigationEvent = this.events.find(event => event.type === 'navigate');
+      if (firstNavigationEvent && window.location.href !== firstNavigationEvent.url) {
+        console.log('Navigating to recording start URL:', firstNavigationEvent.url);
+        window.location.href = firstNavigationEvent.url;
+        // Wait for navigation to complete before continuing
+        return;
+      }
+      
       await this.playEvents();
     } catch (error) {
       console.error('Playback error:', error);
@@ -109,6 +118,10 @@ class Player {
         await this.playSubmit(event);
         break;
       
+      case 'mousemove':
+        await this.playMouseMove(event);
+        break;
+      
       default:
         console.warn('Unknown event type:', event.type);
     }
@@ -118,7 +131,17 @@ class Player {
     const element = await this.findElement(event);
     await SelectorUtils.waitForVisible(element);
     
+    // Show mouse cursor moving to the element
+    if (event.coordinates) {
+      this.showMouseCursor(event.coordinates.x, event.coordinates.y);
+    }
+    
+    // Highlight and animate the element
     this.highlightElement(element);
+    this.showClickAnimation(event.coordinates?.x || 0, event.coordinates?.y || 0);
+    
+    // Wait a moment for visual feedback
+    await this.wait(300);
     
     const clickEvent = new MouseEvent('click', {
       bubbles: true,
@@ -177,9 +200,71 @@ class Player {
   
   async playNavigate(event) {
     if (window.location.href !== event.url) {
+      console.log('Navigating to:', event.url);
+      
+      // Save current playback state before navigation
+      const playbackData = {
+        recording: {
+          events: this.events,
+          name: 'Continuing Playback'
+        },
+        currentIndex: this.currentIndex + 1
+      };
+      localStorage.setItem('browser-recorder-pending-playback', JSON.stringify(playbackData));
+      
+      // Show navigation indicator
+      this.showNavigationIndicator(event.url);
+      
       window.location.href = event.url;
-      await this.wait(2000);
+      
+      // The playback will continue when the new page loads and checks playback state
+      return;
+    } else {
+      console.log('Already on target URL:', event.url);
     }
+  }
+  
+  continuePlayback(recording, startIndex) {
+    this.isPlaying = true;
+    this.isPaused = false;
+    this.currentIndex = startIndex || 0;
+    this.events = recording.events || [];
+    
+    this.showPlaybackIndicator();
+    
+    this.playEvents().then(() => {
+      console.log('Playback completed');
+      this.stop();
+    }).catch(error => {
+      console.error('Playback failed:', error);
+      this.showError(error.message);
+      this.stop();
+    });
+  }
+  
+  showNavigationIndicator(url) {
+    const indicator = document.createElement('div');
+    indicator.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(76, 175, 80, 0.95);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      font-family: sans-serif;
+      font-size: 16px;
+      z-index: 999999;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    `;
+    indicator.innerHTML = `
+      <div style="margin-bottom: 10px;">🔄 Navigating...</div>
+      <div style="font-size: 14px; opacity: 0.9;">${url}</div>
+    `;
+    
+    document.body.appendChild(indicator);
   }
   
   async playKeydown(event) {
@@ -199,6 +284,10 @@ class Player {
   async playSubmit(event) {
     const element = await this.findElement(event);
     element.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+  }
+  
+  async playMouseMove(event) {
+    this.showMouseCursor(event.coordinates.x, event.coordinates.y);
   }
   
   async findElement(event) {
@@ -247,32 +336,53 @@ class Player {
         right: 20px;
         background: rgba(76, 175, 80, 0.9);
         color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
+        padding: 15px 20px;
+        border-radius: 8px;
         font-family: sans-serif;
         font-size: 14px;
         z-index: 999999;
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       ">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+          <div style="
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+          "></div>
+          <span>Playing Recording</span>
+          <button id="stop-playback" style="
+            background: white;
+            color: #4CAF50;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: auto;
+          ">Stop</button>
+        </div>
         <div style="
-          width: 10px;
-          height: 10px;
-          background: white;
-          border-radius: 50%;
-          animation: pulse 1s infinite;
-        "></div>
-        Playing Recording
-        <button id="stop-playback" style="
-          background: white;
-          color: #4CAF50;
-          border: none;
-          padding: 5px 10px;
-          border-radius: 3px;
-          cursor: pointer;
-          font-size: 12px;
-        ">Stop</button>
+          background: rgba(255,255,255,0.2);
+          border-radius: 10px;
+          height: 6px;
+          margin-bottom: 8px;
+          overflow: hidden;
+        ">
+          <div id="playback-progress-bar" style="
+            background: white;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+          "></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px; opacity: 0.9;">
+          <span id="current-step">Step 1</span>
+          <span id="total-steps">of ${this.events.length}</span>
+        </div>
       </div>
       <style>
         @keyframes pulse {
@@ -288,6 +398,83 @@ class Player {
     document.getElementById('stop-playback').addEventListener('click', () => {
       this.stop();
     });
+    
+    // Create mouse cursor
+    this.createMouseCursor();
+  }
+  
+  createMouseCursor() {
+    const cursor = document.createElement('div');
+    cursor.id = 'browser-recorder-mouse-cursor';
+    cursor.innerHTML = `
+      <div style="
+        position: fixed;
+        width: 20px;
+        height: 20px;
+        background: #FF4444;
+        border: 2px solid white;
+        border-radius: 50%;
+        z-index: 999998;
+        pointer-events: none;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: all 0.1s ease;
+        display: none;
+      "></div>
+    `;
+    
+    document.body.appendChild(cursor);
+  }
+  
+  showMouseCursor(x, y) {
+    const cursor = document.querySelector('#browser-recorder-mouse-cursor div');
+    if (cursor) {
+      cursor.style.display = 'block';
+      cursor.style.left = x + 'px';
+      cursor.style.top = y + 'px';
+    }
+  }
+  
+  showClickAnimation(x, y) {
+    const clickIndicator = document.createElement('div');
+    clickIndicator.style.cssText = `
+      position: fixed;
+      left: ${x}px;
+      top: ${y}px;
+      width: 30px;
+      height: 30px;
+      border: 3px solid #FF4444;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 999997;
+      pointer-events: none;
+      animation: clickPulse 0.6s ease-out;
+    `;
+    
+    // Add CSS for animation
+    if (!document.getElementById('click-animation-styles')) {
+      const styles = document.createElement('style');
+      styles.id = 'click-animation-styles';
+      styles.textContent = `
+        @keyframes clickPulse {
+          0% {
+            transform: translate(-50%, -50%) scale(0.3);
+            opacity: 1;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(styles);
+    }
+    
+    document.body.appendChild(clickIndicator);
+    
+    setTimeout(() => {
+      clickIndicator.remove();
+    }, 600);
   }
   
   hidePlaybackIndicator() {
@@ -295,13 +482,36 @@ class Player {
     if (indicator) {
       indicator.remove();
     }
+    
+    const cursor = document.getElementById('browser-recorder-mouse-cursor');
+    if (cursor) {
+      cursor.remove();
+    }
   }
   
   updateProgress() {
     const progress = ((this.currentIndex + 1) / this.events.length) * 100;
+    
+    // Update the progress bar
+    const progressBar = document.getElementById('playback-progress-bar');
+    if (progressBar) {
+      progressBar.style.width = progress + '%';
+    }
+    
+    // Update step counter
+    const currentStep = document.getElementById('current-step');
+    if (currentStep) {
+      currentStep.textContent = `Step ${this.currentIndex + 1}`;
+    }
+    
+    // Send progress to background script and sidebar
     chrome.runtime.sendMessage({
       action: 'playbackProgress',
-      progress: progress
+      progress: progress,
+      currentStep: this.currentIndex + 1,
+      totalSteps: this.events.length
+    }).catch(() => {
+      // Ignore errors if background script can't receive the message
     });
   }
   
