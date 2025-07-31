@@ -48,10 +48,17 @@ function checkPlaybackState() {
       const playbackData = JSON.parse(pendingPlayback);
       localStorage.removeItem('browser-recorder-pending-playback');
       
-      // Resume playback from where we left off
+      // Wait for page to fully load
       setTimeout(() => {
-        if (!player) player = new Player();
-        player.continuePlayback(playbackData.recording, playbackData.currentIndex);
+        if (playbackData.autoStart) {
+          // This is a fresh playback start after navigation
+          console.log('Starting playback after navigation to correct page');
+          startPlayback(playbackData.recording);
+        } else {
+          // This is continuing playback from a specific index
+          if (!player) player = new Player();
+          player.continuePlayback(playbackData.recording, playbackData.currentIndex);
+        }
       }, 1000); // Wait for page to fully load
       
     } catch (error) {
@@ -126,6 +133,31 @@ function updateRecordingState(state) {
 function startPlayback(recording) {
   if (!player) player = new Player();
   
+  // Check if we need to navigate to the recording's starting page first
+  const firstNavigationEvent = recording.events?.find(event => event.type === 'navigate');
+  const startingUrl = firstNavigationEvent?.url || recording.url;
+  
+  if (startingUrl && window.location.href !== startingUrl) {
+    console.log('Navigating to recording start page:', startingUrl);
+    
+    // Show navigation indicator
+    showNavigationToStartIndicator(startingUrl);
+    
+    // Save the recording to localStorage to continue after navigation
+    const playbackData = {
+      recording: recording,
+      currentIndex: 0,
+      autoStart: true
+    };
+    localStorage.setItem('browser-recorder-pending-playback', JSON.stringify(playbackData));
+    
+    // Navigate to the starting page after a brief delay to show the indicator
+    setTimeout(() => {
+      window.location.href = startingUrl;
+    }, 1000);
+    return;
+  }
+  
   // Show playback progress in sidebar
   const progressSection = document.getElementById('br-playback-progress');
   if (progressSection) {
@@ -168,6 +200,54 @@ function hidePlaybackProgress() {
   if (progressSection) {
     progressSection.style.display = 'none';
   }
+}
+
+function showNavigationToStartIndicator(url) {
+  const indicator = document.createElement('div');
+  indicator.id = 'navigation-to-start-indicator';
+  indicator.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(76, 175, 80, 0.95);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    z-index: 999999;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    max-width: 500px;
+  `;
+  
+  const domain = new URL(url).hostname;
+  
+  indicator.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <div style="
+        width: 60px;
+        height: 60px;
+        background: white;
+        border-radius: 50%;
+        margin: 0 auto 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+      ">🎬</div>
+      <h2 style="margin: 0 0 10px 0; font-size: 24px; font-weight: 600;">Starting Playback</h2>
+    </div>
+    <p style="margin: 0 0 10px 0; opacity: 0.95; line-height: 1.5;">
+      Navigating to the recording's starting page...
+    </p>
+    <p style="margin: 0; font-size: 14px; opacity: 0.8; font-family: 'JetBrains Mono', monospace;">
+      ${domain}
+    </p>
+  `;
+  
+  document.body.appendChild(indicator);
 }
 
 function injectSidebar() {

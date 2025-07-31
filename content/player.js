@@ -24,15 +24,6 @@ class Player {
     this.showPlaybackIndicator();
     
     try {
-      // First check if we need to navigate to the starting URL
-      const firstNavigationEvent = this.events.find(event => event.type === 'navigate');
-      if (firstNavigationEvent && window.location.href !== firstNavigationEvent.url) {
-        console.log('Navigating to recording start URL:', firstNavigationEvent.url);
-        window.location.href = firstNavigationEvent.url;
-        // Wait for navigation to complete before continuing
-        return;
-      }
-      
       await this.playEvents();
     } catch (error) {
       console.error('Playback error:', error);
