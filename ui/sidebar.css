@@ -1,0 +1,277 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap');
+
+.browser-recorder-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 999998;
+  transition: transform 0.3s ease;
+}
+
+.browser-recorder-sidebar.collapsed {
+  transform: translateX(280px);
+}
+
+.br-sidebar-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.br-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.br-sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.br-collapse-btn {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.br-collapse-btn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.browser-recorder-sidebar.collapsed .br-collapse-btn {
+  transform: rotate(180deg);
+}
+
+.br-sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.br-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.br-btn {
+  flex: 1;
+  padding: 8px 12px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.br-btn:hover:not(:disabled) {
+  background: #444;
+}
+
+.br-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.br-record-btn .br-record-icon {
+  width: 12px;
+  height: 12px;
+  background: #ff4444;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.br-record-btn:disabled .br-record-icon {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.br-status {
+  background: #262626;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.br-status-text {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.br-status-text.recording {
+  color: #ff4444;
+  font-weight: 500;
+}
+
+.br-status-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  color: #fff;
+}
+
+.br-section {
+  margin-bottom: 24px;
+}
+
+.br-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.br-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.br-empty {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-size: 13px;
+}
+
+.br-recording {
+  background: #262626;
+  padding: 12px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background 0.2s;
+}
+
+.br-recording:hover {
+  background: #2a2a2a;
+}
+
+.br-recording-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.br-recording-name {
+  font-size: 13px;
+  color: #fff;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.br-recording-meta {
+  font-size: 11px;
+  color: #666;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.br-recording-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.br-icon-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.br-icon-btn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.br-icon-btn.br-delete:hover {
+  color: #ff4444;
+}
+
+.br-settings {
+  border-top: 1px solid #333;
+  padding-top: 20px;
+}
+
+.br-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.br-setting label {
+  font-size: 13px;
+  color: #999;
+}
+
+.br-setting span,
+.br-setting select {
+  font-size: 13px;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.br-setting select {
+  background: #333;
+  border: 1px solid #444;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.br-setting select:hover {
+  background: #3a3a3a;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
